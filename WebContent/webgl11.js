@@ -62,27 +62,26 @@ WebGL.prototype.initGl = function () {
 		// 셰이더 초기화
 		this.initShaders();
 		// 예제 물체 만들기
-		setupSphereMesh(0, { "translation": [-1.0, -0.75, 0.0], "color": [1.0, 0.0, 0.0, 1.0], "divisions": 20, "smooth_shading": false }, this);
-		setupSphereMesh(1, { "translation": [1.0, -0.75, 0.0], "color": [1.0, 0.0, 0.0, 1.0], "divisions": 20, "smooth_shading": false }, this);
+		setupSphereMesh(0, { "translation": [-1.0, -0.75, 0.0], "color": [1.0, 0.0, 0.0, 1.0] }, this);
+		setupSphereMesh(1, { "translation": [1.0, -0.75, 0.0], "color": [0.0, 1.0, 0.0, 1.0]}, this);
+		setupSphereMesh(2, { "translation": [1.0, 0.25, 1-.0], "color": [0.0, 0.0, 1.0, 1.0]}, this);
+		setupPlaneMesh(3, {	"translation": [0.0, -1.0, 0.0]}, this);
+					
 		// 매트릭스의 uniform 얻기
 		this.getMatrixUniforms();
 		// 애니메이션 시작
-		// 세 값들을 변경할 수 있게 불러오고
 		this.vertexPositionAttribute = this.gl.getAttribLocation(this.glProgram, "aVertexPosition");
 		this.vertexColorAttribute = this.gl.getAttribLocation(this.glProgram, "aVertexColor");
 		this.vertexNormalAttribute = this.gl.getAttribLocation(this.glProgram, "aVertexNormal");
 		
-		// 이 값들을 변경할 것을 선언하고
 		this.gl.enableVertexAttribArray(this.vertexPositionAttribute);
 		this.gl.enableVertexAttribArray(this.vertexColorAttribute);
 		this.gl.enableVertexAttribArray(this.vertexNormalAttribute);
     			    
-		// view를 설정
 		this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
 		mat4.perspective(45, this.canvas.width / this.canvas.height, 0.1, 100.0, this.pMatrix);
 		this.gl.uniformMatrix4fv(this.glProgram.pMatrixUniform, false, this.pMatrix);
-		
-		// 현재는 view가 고정이기 때문에 pMatrix를 한번만 넘겨주면 된다.
+					
 		this.animation();
 	}
 }
@@ -140,25 +139,34 @@ WebGL.prototype.drawScene = function () {
 	mat4.toInverseMat3(this.mvMatrix, this.normalMatrix);
 	mat3.transpose(this.normalMatrix);
 	this.angle += 0.005;
-	this.setMatrixUniforms();
+	this.setMatrixUniforms();	
 	
-	for(var i=0; i < this.vertexIndexBuffers.length; ++i){
-		// 이곳에서 불러온 셰이더 값들에 데이터를 넘겨 수정해준다.
-		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.trianglesVerticeBuffers[i]);
+	var drawOrder = [1,2,3,0];
+
+	for(var i=0; i < drawOrder.length; ++i){
+		var n = drawOrder[i];
+
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.trianglesVerticeBuffers[n]);
 		this.gl.vertexAttribPointer(this.vertexPositionAttribute, 3, this.gl.FLOAT, false, 0, 0);
 
-		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.trianglesColorBuffers[i]);
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.trianglesColorBuffers[n]);
 		this.gl.vertexAttribPointer(this.vertexColorAttribute, 4, this.gl.FLOAT, false, 0, 0);
 					
-		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.trianglesNormalBuffers[i]);
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.trianglesNormalBuffers[n]);
 		this.gl.vertexAttribPointer(this.vertexNormalAttribute, 3, this.gl.FLOAT, false, 0, 0);
 		
-		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.trianglesTexCoordBuffers[i]);
-		if(i==3){
-			this.gl.drawElements(this.gl.TRIANGLES, this.vertexIndexBuffers[i].numItems, this.gl.UNSIGNED_SHORT, 0);
+		// 우리는 완전히 불투명한 물체부터 렌더링 하고 이어서 반투명한 객체를 렌더링해야한다.
+		if(n==0){
+			this.gl.disable(this.gl.DEPTH_TEST);
+			this.gl.enable(this.gl.BLEND);
+			this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE);
+			this.gl.blendEquation(this.gl.FUNC_ADD);
 		}else{
-			this.gl.drawArrays(this.gl.TRIANGLES, 0, this.trianglesVerticeBuffers[i].numItems);
-		}
+			this.gl.disable(this.gl.BLEND);
+			this.gl.enable(this.gl.DEPTH_TEST);
+		}		
+		this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffers[n]);
+		this.gl.drawElements(this.gl.TRIANGLES, this.vertexIndexBuffers[n].numItems, this.gl.UNSIGNED_SHORT, 0);
 	}
 	//gl에 그린다.
 }

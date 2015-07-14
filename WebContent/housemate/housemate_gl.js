@@ -1,15 +1,6 @@
-function getE(id) {
-	return document.getElementById(id);
-}
-var webgl3;
-window.onload = function () {
-	webgl3 = new WebGL();
-	webgl3.initGl();
-};
-
-var WebGL = function () {
+﻿var WebGL = function () {
 	// 캔버스
-	this.canvas = getE("webgl_z");
+	this.canvas = null;
 	this.gl = null;
 
 	// 프로그램
@@ -46,10 +37,13 @@ var WebGL = function () {
 		useTexture : false,
 		useLighting : false
 	}
+	
+	return this;
 }
 
-WebGL.prototype.initGl = function () {
+WebGL.prototype.initGl = function (canvas) {
 	try {
+		this.canvas = canvas;
 		this.gl = this.canvas.getContext("webgl") || this.canvas.getContext("experimental-webgl");
 		this.gl = WebGLDebugUtils.makeDebugContext(this.gl)
 	} catch (e) {
@@ -63,26 +57,20 @@ WebGL.prototype.initGl = function () {
 		this.initShaders();
 		// 예제 물체 만들기
 		setupSphereMesh(0, { "translation": [-1.0, -0.75, 0.0], "color": [1.0, 0.0, 0.0, 1.0], "divisions": 20, "smooth_shading": false }, this);
-		setupSphereMesh(1, { "translation": [1.0, -0.75, 0.0], "color": [1.0, 0.0, 0.0, 1.0], "divisions": 20, "smooth_shading": false }, this);
 		// 매트릭스의 uniform 얻기
 		this.getMatrixUniforms();
 		// 애니메이션 시작
-		// 세 값들을 변경할 수 있게 불러오고
 		this.vertexPositionAttribute = this.gl.getAttribLocation(this.glProgram, "aVertexPosition");
 		this.vertexColorAttribute = this.gl.getAttribLocation(this.glProgram, "aVertexColor");
 		this.vertexNormalAttribute = this.gl.getAttribLocation(this.glProgram, "aVertexNormal");
-		
-		// 이 값들을 변경할 것을 선언하고
 		this.gl.enableVertexAttribArray(this.vertexPositionAttribute);
 		this.gl.enableVertexAttribArray(this.vertexColorAttribute);
 		this.gl.enableVertexAttribArray(this.vertexNormalAttribute);
     			    
-		// view를 설정
 		this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
 		mat4.perspective(45, this.canvas.width / this.canvas.height, 0.1, 100.0, this.pMatrix);
 		this.gl.uniformMatrix4fv(this.glProgram.pMatrixUniform, false, this.pMatrix);
-		
-		// 현재는 view가 고정이기 때문에 pMatrix를 한번만 넘겨주면 된다.
+					
 		this.animation();
 	}
 }
@@ -114,8 +102,8 @@ WebGL.prototype.initShaders = function () {
 	// 프로그램 생성
 	this.glProgram = this.gl.createProgram();
 	// 각 버텍스 셰이더와 픽셸 세이더를 만드는 API호출
-	var vertexShader = this.makeShader(getE("shader-vs-z").innerHTML.trim(), this.gl.VERTEX_SHADER);
-	var pixelShader = this.makeShader(getE("shader-fs-z").innerHTML.trim(), this.gl.FRAGMENT_SHADER);
+	var vertexShader = this.makeShader(GI("shader-vs-z").innerHTML.trim(), this.gl.VERTEX_SHADER);
+	var pixelShader = this.makeShader(GI("shader-fs-z").innerHTML.trim(), this.gl.FRAGMENT_SHADER);
 	//셰이더를 붙이고
 	this.gl.attachShader(this.glProgram, vertexShader);
 	this.gl.attachShader(this.glProgram, pixelShader);
@@ -143,7 +131,6 @@ WebGL.prototype.drawScene = function () {
 	this.setMatrixUniforms();
 	
 	for(var i=0; i < this.vertexIndexBuffers.length; ++i){
-		// 이곳에서 불러온 셰이더 값들에 데이터를 넘겨 수정해준다.
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.trianglesVerticeBuffers[i]);
 		this.gl.vertexAttribPointer(this.vertexPositionAttribute, 3, this.gl.FLOAT, false, 0, 0);
 
@@ -176,7 +163,7 @@ WebGL.prototype.makeShader = function (src, type) {
 }
 
 WebGL.prototype.setupWebGL = function () {
-	this.gl.clearColor(0.1, 0.5, 0.1, 1.0); 	
+	this.gl.clearColor(255, 255, 255, 1.0); 	
 	this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT); 	
 	this.gl.enable(this.gl.DEPTH_TEST);
 }
